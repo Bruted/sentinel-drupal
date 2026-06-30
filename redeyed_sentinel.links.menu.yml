@@ -1,0 +1,6 @@
+redeyed_sentinel.settings:
+  title: 'Redeyed Sentinel CAPTCHA'
+  description: 'Configure the Redeyed Sentinel human-verification widget for login and registration.'
+  parent: system.admin_config_people
+  route_name: redeyed_sentinel.settings
+  weight: 10

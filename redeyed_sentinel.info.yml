@@ -1,0 +1,9 @@
+name: 'Redeyed Sentinel CAPTCHA'
+type: module
+description: 'Friendly, privacy-respecting human verification on the login and registration forms, powered by Redeyed Sentinel. Free to install; inert until you add your keys.'
+core_version_requirement: ^10 || ^11
+package: 'Spam control'
+configure: redeyed_sentinel.settings
+
+# Standalone module: no dependency on the contrib CAPTCHA module.
+# Integration is done through hook_form_alter() + a validation handler.

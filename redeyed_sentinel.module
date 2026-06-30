@@ -1,0 +1,153 @@
+<?php
+
+/**
+ * @file
+ * Redeyed Sentinel CAPTCHA.
+ *
+ * Adds a Redeyed Sentinel human-verification widget to the user login and
+ * registration forms and verifies the result server-side.
+ *
+ * Sentinel contract:
+ *  - Render: load "{base_url}/sentinel.js" once and place a
+ *    <div class="sentinel-captcha" data-sitekey="{site_key}"></div> in the
+ *    form. The widget injects a hidden "sentinel-token" input.
+ *  - Verify: POST "{base_url}/api/v1/verify" with header
+ *    "X-Api-Key: {api_key}" and JSON body
+ *    {"site_key": "...", "token": "..."}. Passes only when the JSON has
+ *    data.success === true or top-level success === true.
+ *
+ * Free to install: when the site key or API key is empty the widget renders
+ * nothing and verification fails OPEN, so forms are never blocked.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Markup;
+use GuzzleHttp\Exception\GuzzleException;
+
+/**
+ * Forms that receive the Sentinel widget.
+ */
+const REDEYED_CAPTCHA_FORMS = [
+  'user_login_form',
+  'user_register_form',
+];
+
+/**
+ * Implements hook_form_alter().
+ */
+function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if (!in_array($form_id, REDEYED_CAPTCHA_FORMS, TRUE)) {
+    return;
+  }
+
+  $config = \Drupal::config('redeyed_sentinel.settings');
+  $site_key = trim((string) $config->get('site_key'));
+  $base_url = rtrim(trim((string) $config->get('base_url')) ?: 'https://redeyed.com', '/');
+
+  // Inert: no site key configured -> render nothing, add no validation.
+  if ($site_key === '') {
+    return;
+  }
+
+  // Render the loader script (once) and the captcha mount point.
+  // Twig autoescaping in the inline template escapes the site key and URL.
+  $form['redeyed_sentinel_captcha'] = [
+    '#type' => 'container',
+    '#weight' => 100,
+    'widget' => [
+      '#type' => 'inline_template',
+      '#template' => '<script src="{{ script_src }}" async></script><div class="sentinel-captcha" data-sitekey="{{ site_key }}"></div>',
+      '#context' => [
+        'script_src' => $base_url . '/sentinel.js',
+        'site_key' => $site_key,
+      ],
+    ],
+  ];
+
+  // Server-side verification runs before the form's own validation handlers.
+  array_unshift($form['#validate'], 'redeyed_sentinel_validate');
+}
+
+/**
+ * Form validation handler: verifies the Sentinel token server-side.
+ */
+function redeyed_sentinel_validate(array &$form, FormStateInterface $form_state) {
+  $config = \Drupal::config('redeyed_sentinel.settings');
+  $site_key = trim((string) $config->get('site_key'));
+  $api_key = trim((string) $config->get('api_key'));
+  $base_url = rtrim(trim((string) $config->get('base_url')) ?: 'https://redeyed.com', '/');
+
+  // Fail OPEN when keys are not fully configured.
+  if ($site_key === '' || $api_key === '') {
+    return;
+  }
+
+  // sentinel.js injects the token as a raw POST field "sentinel-token";
+  // it is not part of Drupal's Form API tree, so read it from the request.
+  $request = \Drupal::request();
+  $token = trim((string) $request->request->get('sentinel-token', ''));
+
+  $failure = t('Human verification failed — please try again.');
+
+  if ($token === '') {
+    $form_state->setErrorByName('redeyed_sentinel_captcha', $failure);
+    return;
+  }
+
+  if (!redeyed_sentinel_verify($base_url, $site_key, $api_key, $token)) {
+    $form_state->setErrorByName('redeyed_sentinel_captcha', $failure);
+  }
+}
+
+/**
+ * Verifies a Sentinel token against the Redeyed verify endpoint.
+ *
+ * @param string $base_url
+ *   Sentinel base URL, no trailing slash.
+ * @param string $site_key
+ *   Public site key.
+ * @param string $api_key
+ *   Secret API key (sent only in the X-Api-Key header, never logged/echoed).
+ * @param string $token
+ *   The submitted sentinel-token value.
+ *
+ * @return bool
+ *   TRUE only when the response reports success; FALSE on failure or error.
+ */
+function redeyed_sentinel_verify(string $base_url, string $site_key, string $api_key, string $token): bool {
+  try {
+    $response = \Drupal::httpClient()->post($base_url . '/api/v1/verify', [
+      'headers' => [
+        'X-Api-Key' => $api_key,
+        'Content-Type' => 'application/json',
+        'Accept' => 'application/json',
+      ],
+      'json' => [
+        'site_key' => $site_key,
+        'token' => $token,
+      ],
+      'timeout' => 10,
+      'http_errors' => FALSE,
+    ]);
+
+    $data = json_decode((string) $response->getBody(), TRUE);
+  }
+  catch (GuzzleException $e) {
+    // Network/transport failure: treat as not verified. Do not log the key.
+    \Drupal::logger('redeyed_sentinel')->warning('Sentinel verification request failed: @msg', [
+      '@msg' => $e->getMessage(),
+    ]);
+    return FALSE;
+  }
+
+  if (!is_array($data)) {
+    return FALSE;
+  }
+
+  // Pass only when data.success === true OR top-level success === true.
+  if (isset($data['data']['success']) && $data['data']['success'] === TRUE) {
+    return TRUE;
+  }
+
+  return isset($data['success']) && $data['success'] === TRUE;
+}

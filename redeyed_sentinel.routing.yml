@@ -1,0 +1,7 @@
+redeyed_sentinel.settings:
+  path: '/admin/config/people/redeyed-captcha'
+  defaults:
+    _form: '\Drupal\redeyed_sentinel\Form\SettingsForm'
+    _title: 'Redeyed Sentinel CAPTCHA'
+  requirements:
+    _permission: 'administer site configuration'
