@@ -11,12 +11,11 @@
  *  - Render: load "{base_url}/sentinel.js" once and place a
  *    <div class="sentinel-captcha" data-sitekey="{site_key}"></div> in the
  *    form. The widget injects a hidden "sentinel-token" input.
- *  - Verify: POST "{base_url}/api/v1/verify" with header
- *    "X-Api-Key: {api_key}" and JSON body
- *    {"site_key": "...", "token": "..."}. Passes only when the JSON has
- *    data.success === true or top-level success === true.
+ *  - Verify: POST "{base_url}/sentinel/siteverify" with JSON body
+ *    {"secret": "...", "response": "...", "remoteip": "..."} (remoteip
+ *    optional). Passes only when the JSON has success === true.
  *
- * Free to install: when the site key or API key is empty the widget renders
+ * Free to install: when the site key or secret key is empty the widget renders
  * nothing and verification fails OPEN, so forms are never blocked.
  */
 
@@ -74,11 +73,11 @@ function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_stat
 function redeyed_sentinel_validate(array &$form, FormStateInterface $form_state) {
   $config = \Drupal::config('redeyed_sentinel.settings');
   $site_key = trim((string) $config->get('site_key'));
-  $api_key = trim((string) $config->get('api_key'));
+  $secret_key = trim((string) $config->get('secret_key'));
   $base_url = rtrim(trim((string) $config->get('base_url')) ?: 'https://redeyed.com', '/');
 
   // Fail OPEN when keys are not fully configured.
-  if ($site_key === '' || $api_key === '') {
+  if ($site_key === '' || $secret_key === '') {
     return;
   }
 
@@ -94,38 +93,47 @@ function redeyed_sentinel_validate(array &$form, FormStateInterface $form_state)
     return;
   }
 
-  if (!redeyed_sentinel_verify($base_url, $site_key, $api_key, $token)) {
+  $remote_ip = (string) $request->getClientIp();
+
+  if (!redeyed_sentinel_verify($base_url, $secret_key, $token, $remote_ip)) {
     $form_state->setErrorByName('redeyed_sentinel_captcha', $failure);
   }
 }
 
 /**
- * Verifies a Sentinel token against the Redeyed verify endpoint.
+ * Verifies a Sentinel token against the Redeyed siteverify endpoint.
+ *
+ * Uses the reCAPTCHA/Turnstile-style flow: the site's own secret key
+ * authenticates the request (there is no developer API key).
  *
  * @param string $base_url
  *   Sentinel base URL, no trailing slash.
- * @param string $site_key
- *   Public site key.
- * @param string $api_key
- *   Secret API key (sent only in the X-Api-Key header, never logged/echoed).
+ * @param string $secret_key
+ *   The site's secret key (sent only in the POST body, never logged/echoed).
  * @param string $token
  *   The submitted sentinel-token value.
+ * @param string $remote_ip
+ *   The client IP address (optional; sent as "remoteip" when non-empty).
  *
  * @return bool
  *   TRUE only when the response reports success; FALSE on failure or error.
  */
-function redeyed_sentinel_verify(string $base_url, string $site_key, string $api_key, string $token): bool {
+function redeyed_sentinel_verify(string $base_url, string $secret_key, string $token, string $remote_ip = ''): bool {
+  $payload = [
+    'secret' => $secret_key,
+    'response' => $token,
+  ];
+  if ($remote_ip !== '') {
+    $payload['remoteip'] = $remote_ip;
+  }
+
   try {
-    $response = \Drupal::httpClient()->post($base_url . '/api/v1/verify', [
+    $response = \Drupal::httpClient()->post($base_url . '/sentinel/siteverify', [
       'headers' => [
-        'X-Api-Key' => $api_key,
         'Content-Type' => 'application/json',
         'Accept' => 'application/json',
       ],
-      'json' => [
-        'site_key' => $site_key,
-        'token' => $token,
-      ],
+      'json' => $payload,
       'timeout' => 10,
       'http_errors' => FALSE,
     ]);
@@ -144,10 +152,6 @@ function redeyed_sentinel_verify(string $base_url, string $site_key, string $api
     return FALSE;
   }
 
-  // Pass only when data.success === true OR top-level success === true.
-  if (isset($data['data']['success']) && $data['data']['success'] === TRUE) {
-    return TRUE;
-  }
-
+  // Pass only when the response reports success === true.
   return isset($data['success']) && $data['success'] === TRUE;
 }

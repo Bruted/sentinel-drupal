@@ -29,8 +29,9 @@ working while you get set up.
 
 ## Configure
 
-Grab a **Site Key** and **API Key** from the Redeyed Lab:
-**Developer → Sentinel → Sites + API Keys**.
+Grab a **Site Key** and **Secret Key** from the Redeyed Lab:
+**Sentinel → Sites**. The Secret Key is shown only once, when you create the
+site — copy it then.
 
 Go to **Administration → Configuration → People → Redeyed Sentinel CAPTCHA**
 (`/admin/config/people/redeyed-captcha`) and enter:
@@ -38,10 +39,10 @@ Go to **Administration → Configuration → People → Redeyed Sentinel CAPTCHA
 | Field        | Purpose |
 |--------------|---------|
 | Site key     | Public key that renders the widget. Safe to expose. |
-| API key      | Secret key used only for server-side verification. Keep private. |
+| Secret key   | Secret key used only for server-side verification. Keep private. |
 | Base URL     | Sentinel service URL. Defaults to `https://redeyed.com`. |
 
-> Until **both** the site key and API key are set the module is **inert**:
+> Until **both** the site key and secret key are set the module is **inert**:
 > nothing renders and verification passes automatically (fail open). Forms are
 > never blocked by missing configuration.
 
@@ -51,11 +52,12 @@ Go to **Administration → Configuration → People → Redeyed Sentinel CAPTCHA
 |--------|--------|
 | Render | `hook_form_alter()` adds `{base_url}/sentinel.js` and a `sentinel-captcha` div (using your site key) to the login and registration forms. |
 | Submit | The Sentinel widget injects a hidden `sentinel-token` field. |
-| Verify | A validation handler POSTs to `{base_url}/api/v1/verify` via `\Drupal::httpClient()` with header `X-Api-Key: {api_key}` and body `{"site_key": "...", "token": "..."}`. |
-| Pass   | Only when the JSON response has `data.success === true` or top-level `success === true`; otherwise the form shows *"Human verification failed — please try again."* |
+| Verify | A validation handler POSTs to `{base_url}/sentinel/siteverify` via `\Drupal::httpClient()` with body `{"secret": "...", "response": "...", "remoteip": "..."}` (the `remoteip` is the client IP and is optional). |
+| Pass   | Only when the JSON response has top-level `success === true` (the response also carries `outcome` and `score`); otherwise the form shows *"Human verification failed — please try again."* |
 
-The secret API key is sent only in the `X-Api-Key` request header — it is never
-rendered to the page or written to logs.
+The secret key is sent only in the request body — never rendered to the page or
+written to logs. This is a reCAPTCHA/Turnstile-style flow: your site's own
+secret key authenticates the verify call, so no developer API key is required.
 
 ## Requirements
 

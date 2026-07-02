@@ -38,7 +38,7 @@ class SettingsForm extends ConfigFormBase {
     $config = $this->config(self::SETTINGS);
 
     $form['intro'] = [
-      '#markup' => $this->t('Free to use. Grab your keys from the Redeyed Lab: <strong>Developer → Sentinel → Sites + API Keys</strong>. Until both keys are set the widget stays inert and forms are never blocked.'),
+      '#markup' => $this->t('Free to use. Grab your keys from the Redeyed Lab: <strong>Sentinel → Sites</strong>. The Secret Key is shown only once when you create the site. Until both keys are set the widget stays inert and forms are never blocked.'),
     ];
 
     $form['site_key'] = [
@@ -49,11 +49,11 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
-    $form['api_key'] = [
+    $form['secret_key'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('API key (secret)'),
-      '#description' => $this->t('Secret key used only for server-side verification. Keep it private.'),
-      '#default_value' => (string) $config->get('api_key'),
+      '#title' => $this->t('Secret key'),
+      '#description' => $this->t('Secret key used only for server-side verification. Keep it private. Shown once in the Redeyed Lab.'),
+      '#default_value' => (string) $config->get('secret_key'),
       '#maxlength' => 255,
     ];
 
@@ -79,7 +79,7 @@ class SettingsForm extends ConfigFormBase {
 
     $this->config(self::SETTINGS)
       ->set('site_key', trim((string) $form_state->getValue('site_key')))
-      ->set('api_key', trim((string) $form_state->getValue('api_key')))
+      ->set('secret_key', trim((string) $form_state->getValue('secret_key')))
       ->set('base_url', $base_url)
       ->save();
 
