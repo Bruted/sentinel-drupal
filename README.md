@@ -46,6 +46,24 @@ Go to **Administration → Configuration → People → Redeyed Sentinel CAPTCHA
 > nothing renders and verification passes automatically (fail open). Forms are
 > never blocked by missing configuration.
 
+### Widget customization (optional)
+
+Under **Widget customization (optional)** you can fine-tune how the widget looks
+and behaves. Every field is optional and backward-compatible — leave any of them
+empty to use the Sentinel widget defaults. When set, each renders as a `data-*`
+attribute on the `sentinel-captcha` div.
+
+| Field        | Attribute         | Purpose |
+|--------------|-------------------|---------|
+| Widget type  | `data-widget`     | Widget style, e.g. `behavioral`, `checkbox`, `press_hold`, `image_pick`. |
+| Theme        | `data-theme`      | `auto`, `light` or `dark`. |
+| Colour scheme| `data-scheme`     | Named colour scheme for the widget. |
+| Difficulty   | `data-difficulty` | Minimum challenge strength: `easy`, `medium`, `hard`, `max` (or `1`–`6`). |
+
+> **Difficulty only raises challenge strength above the adaptive baseline.** It
+> never lowers it — Sentinel still escalates on its own when it sees risk, so a
+> low difficulty will not weaken protection for suspicious traffic.
+
 ## How it works
 
 | Step   | Detail |

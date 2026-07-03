@@ -11,3 +11,15 @@ redeyed_sentinel.settings:
     base_url:
       type: string
       label: 'Base URL'
+    widget:
+      type: string
+      label: 'Widget type'
+    theme:
+      type: string
+      label: 'Theme'
+    scheme:
+      type: string
+      label: 'Colour scheme'
+    difficulty:
+      type: string
+      label: 'Difficulty'

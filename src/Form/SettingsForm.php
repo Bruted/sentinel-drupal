@@ -65,6 +65,45 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
+    $form['appearance'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Widget customization (optional)'),
+      '#description' => $this->t('All optional. Leave any field empty to use the Sentinel widget defaults.'),
+      '#open' => FALSE,
+    ];
+
+    $form['appearance']['widget'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Widget type'),
+      '#description' => $this->t('Widget style, e.g. <code>behavioral</code>, <code>checkbox</code>, <code>press_hold</code> or <code>image_pick</code>. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('widget'),
+      '#maxlength' => 255,
+    ];
+
+    $form['appearance']['theme'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Theme'),
+      '#description' => $this->t('Widget theme: <code>auto</code>, <code>light</code> or <code>dark</code>. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('theme'),
+      '#maxlength' => 255,
+    ];
+
+    $form['appearance']['scheme'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Colour scheme'),
+      '#description' => $this->t('Named colour scheme for the widget. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('scheme'),
+      '#maxlength' => 255,
+    ];
+
+    $form['appearance']['difficulty'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Difficulty'),
+      '#description' => $this->t('Optional minimum challenge strength: <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>max</code> (or <code>1</code>–<code>6</code>). This only <strong>raises</strong> challenge strength above the adaptive baseline; it never lowers it. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('difficulty'),
+      '#maxlength' => 255,
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -81,6 +120,10 @@ class SettingsForm extends ConfigFormBase {
       ->set('site_key', trim((string) $form_state->getValue('site_key')))
       ->set('secret_key', trim((string) $form_state->getValue('secret_key')))
       ->set('base_url', $base_url)
+      ->set('widget', trim((string) $form_state->getValue('widget')))
+      ->set('theme', trim((string) $form_state->getValue('theme')))
+      ->set('scheme', trim((string) $form_state->getValue('scheme')))
+      ->set('difficulty', trim((string) $form_state->getValue('difficulty')))
       ->save();
 
     parent::submitForm($form, $form_state);

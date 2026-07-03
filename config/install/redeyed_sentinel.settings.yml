@@ -1,3 +1,7 @@
 site_key: ''
 secret_key: ''
 base_url: 'https://redeyed.com'
+widget: ''
+theme: ''
+scheme: ''
+difficulty: ''
