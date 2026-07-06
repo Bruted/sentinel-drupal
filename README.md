@@ -59,6 +59,7 @@ attribute on the `sentinel-captcha` div.
 | Theme        | `data-theme`      | `auto`, `light` or `dark`. |
 | Colour scheme| `data-scheme`     | Named colour scheme for the widget. |
 | Difficulty   | `data-difficulty` | Minimum challenge strength: `easy`, `medium`, `hard`, `max` (or `1`–`6`). |
+| Width        | `data-width`      | Widget container width, e.g. `full`, `100%` or `340px`. |
 
 > **Difficulty only raises challenge strength above the adaptive baseline.** It
 > never lowers it — Sentinel still escalates on its own when it sees risk, so a
@@ -81,6 +82,14 @@ secret key authenticates the verify call, so no developer API key is required.
 
 - Drupal 10 or 11
 - PHP 8.1+ (per Drupal core requirements)
+
+## Changelog
+
+### 1.0.3
+
+- Added an optional **Width** setting that renders as `data-width` on the
+  `sentinel-captcha` div only when set, e.g. `full`, `100%` or `340px`.
+  Backward-compatible; leave it empty for the default.
 
 ## License
 

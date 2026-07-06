@@ -3,6 +3,7 @@ type: module
 description: 'Friendly, privacy-respecting human verification on the login and registration forms, powered by Redeyed Sentinel. Free to install; inert until you add your keys.'
 core_version_requirement: ^10 || ^11
 package: 'Spam control'
+version: '1.0.3'
 configure: redeyed_sentinel.settings
 
 # Standalone module: no dependency on the contrib CAPTCHA module.
