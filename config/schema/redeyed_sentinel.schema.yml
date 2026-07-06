@@ -5,9 +5,27 @@ redeyed_sentinel.settings:
     site_key:
       type: string
       label: 'Site key (public)'
-    api_key:
+    secret_key:
       type: string
-      label: 'API key (secret)'
+      label: 'Secret key'
     base_url:
       type: string
       label: 'Base URL'
+    widget:
+      type: string
+      label: 'Widget type'
+    theme:
+      type: string
+      label: 'Theme'
+    scheme:
+      type: string
+      label: 'Colour scheme'
+    difficulty:
+      type: string
+      label: 'Difficulty'
+    width:
+      type: string
+      label: 'Width'
+    form:
+      type: string
+      label: 'Form key'
