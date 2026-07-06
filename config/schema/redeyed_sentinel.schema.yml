@@ -23,3 +23,6 @@ redeyed_sentinel.settings:
     difficulty:
       type: string
       label: 'Difficulty'
+    width:
+      type: string
+      label: 'Width'

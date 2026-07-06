@@ -49,6 +49,7 @@ function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_stat
   $theme = trim((string) $config->get('theme'));
   $scheme = trim((string) $config->get('scheme'));
   $difficulty = trim((string) $config->get('difficulty'));
+  $width = trim((string) $config->get('width'));
 
   // Inert: no site key configured -> render nothing, add no validation.
   if ($site_key === '') {
@@ -62,7 +63,7 @@ function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_stat
     '#weight' => 100,
     'widget' => [
       '#type' => 'inline_template',
-      '#template' => '<script src="{{ script_src }}" async></script><div class="sentinel-captcha" data-sitekey="{{ site_key }}"{% if widget %} data-widget="{{ widget }}"{% endif %}{% if theme %} data-theme="{{ theme }}"{% endif %}{% if scheme %} data-scheme="{{ scheme }}"{% endif %}{% if difficulty %} data-difficulty="{{ difficulty }}"{% endif %}></div>',
+      '#template' => '<script src="{{ script_src }}" async></script><div class="sentinel-captcha" data-sitekey="{{ site_key }}"{% if widget %} data-widget="{{ widget }}"{% endif %}{% if theme %} data-theme="{{ theme }}"{% endif %}{% if scheme %} data-scheme="{{ scheme }}"{% endif %}{% if difficulty %} data-difficulty="{{ difficulty }}"{% endif %}{% if width %} data-width="{{ width }}"{% endif %}></div>',
       '#context' => [
         'script_src' => $base_url . '/sentinel.js',
         'site_key' => $site_key,
@@ -70,6 +71,7 @@ function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_stat
         'theme' => $theme,
         'scheme' => $scheme,
         'difficulty' => $difficulty,
+        'width' => $width,
       ],
     ],
   ];

@@ -104,6 +104,14 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
+    $form['appearance']['width'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Width'),
+      '#description' => $this->t('Optional width for the widget container, e.g. <code>full</code>, <code>100%</code> or <code>340px</code>. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('width'),
+      '#maxlength' => 255,
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -124,6 +132,7 @@ class SettingsForm extends ConfigFormBase {
       ->set('theme', trim((string) $form_state->getValue('theme')))
       ->set('scheme', trim((string) $form_state->getValue('scheme')))
       ->set('difficulty', trim((string) $form_state->getValue('difficulty')))
+      ->set('width', trim((string) $form_state->getValue('width')))
       ->save();
 
     parent::submitForm($form, $form_state);
