@@ -65,6 +65,44 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
+    $form['forms'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Protected forms'),
+      '#description' => $this->t('Choose which forms show and verify the Sentinel widget. Login and registration are on by default.'),
+      '#open' => TRUE,
+    ];
+
+    $form['forms']['enable_login'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Login form'),
+      '#default_value' => (bool) ($config->get('enable_login') ?? TRUE),
+    ];
+
+    $form['forms']['enable_register'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Registration form'),
+      '#default_value' => (bool) ($config->get('enable_register') ?? TRUE),
+    ];
+
+    $form['forms']['enable_lostpassword'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Password reset (lost password) form'),
+      '#default_value' => (bool) ($config->get('enable_lostpassword') ?? FALSE),
+    ];
+
+    $form['forms']['enable_contact'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Contact forms (site-wide &amp; personal)'),
+      '#default_value' => (bool) ($config->get('enable_contact') ?? FALSE),
+    ];
+
+    $form['forms']['enable_logging'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Log blocked attempts'),
+      '#description' => $this->t('Record each blocked submission (form, IP, outcome) to the log. View them at <em>Reports → Recent log messages</em>, type <code>redeyed_sentinel</code>.'),
+      '#default_value' => (bool) ($config->get('enable_logging') ?? TRUE),
+    ];
+
     $form['appearance'] = [
       '#type' => 'details',
       '#title' => $this->t('Widget customization (optional)'),
@@ -128,6 +166,11 @@ class SettingsForm extends ConfigFormBase {
       ->set('site_key', trim((string) $form_state->getValue('site_key')))
       ->set('secret_key', trim((string) $form_state->getValue('secret_key')))
       ->set('base_url', $base_url)
+      ->set('enable_login', (bool) $form_state->getValue('enable_login'))
+      ->set('enable_register', (bool) $form_state->getValue('enable_register'))
+      ->set('enable_lostpassword', (bool) $form_state->getValue('enable_lostpassword'))
+      ->set('enable_contact', (bool) $form_state->getValue('enable_contact'))
+      ->set('enable_logging', (bool) $form_state->getValue('enable_logging'))
       ->set('widget', trim((string) $form_state->getValue('widget')))
       ->set('theme', trim((string) $form_state->getValue('theme')))
       ->set('scheme', trim((string) $form_state->getValue('scheme')))
