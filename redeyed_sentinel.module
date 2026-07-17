@@ -4,8 +4,10 @@
  * @file
  * Redeyed Sentinel CAPTCHA.
  *
- * Adds a Redeyed Sentinel human-verification widget to the user login and
- * registration forms and verifies the result server-side.
+ * Adds a Redeyed Sentinel human-verification widget to the forms bots hit
+ * hardest — user login, registration, password reset (lost password) and the
+ * site contact forms — and verifies the result server-side. Each form is
+ * independently toggleable in the module settings.
  *
  * Sentinel contract:
  *  - Render: load "{base_url}/sentinel.js" once and place a
@@ -16,30 +18,77 @@
  *    optional). Passes only when the JSON has success === true.
  *
  * Free to install: when the site key or secret key is empty the widget renders
- * nothing and verification fails OPEN, so forms are never blocked.
+ * nothing and verification fails OPEN, so forms are never blocked. Blocked
+ * attempts can be recorded to Drupal's log (Reports → Recent log messages,
+ * type "redeyed_sentinel") for admin visibility.
  */
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Render\Markup;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * Forms that receive the Sentinel widget.
+ * Map a Drupal form id to a Sentinel "form key", or NULL if unprotected.
+ *
+ * @param string $form_id
+ *   The form id being built.
+ *
+ * @return string|null
+ *   One of login|register|lostpassword|contact, or NULL.
  */
-const REDEYED_CAPTCHA_FORMS = [
-  'user_login_form',
-  'user_register_form',
-];
+function redeyed_sentinel_form_key(string $form_id): ?string {
+  switch ($form_id) {
+    case 'user_login_form':
+      return 'login';
+
+    case 'user_register_form':
+      return 'register';
+
+    case 'user_pass':
+      return 'lostpassword';
+  }
+
+  // Site-wide + personal contact forms: contact_message_{id}_form.
+  if (str_starts_with($form_id, 'contact_message_') && str_ends_with($form_id, '_form')) {
+    return 'contact';
+  }
+
+  return NULL;
+}
+
+/**
+ * Whether a given form key is enabled, applying per-key defaults for configs
+ * saved before the per-form settings existed (login/register default ON).
+ */
+function redeyed_sentinel_form_enabled($config, string $key): bool {
+  $defaults = [
+    'login' => TRUE,
+    'register' => TRUE,
+    'lostpassword' => FALSE,
+    'contact' => FALSE,
+  ];
+
+  $value = $config->get('enable_' . $key);
+  if ($value === NULL) {
+    return $defaults[$key] ?? FALSE;
+  }
+
+  return (bool) $value;
+}
 
 /**
  * Implements hook_form_alter().
  */
 function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
-  if (!in_array($form_id, REDEYED_CAPTCHA_FORMS, TRUE)) {
+  $form_key = redeyed_sentinel_form_key($form_id);
+  if ($form_key === NULL) {
     return;
   }
 
   $config = \Drupal::config('redeyed_sentinel.settings');
+  if (!redeyed_sentinel_form_enabled($config, $form_key)) {
+    return;
+  }
+
   $site_key = trim((string) $config->get('site_key'));
   $base_url = rtrim(trim((string) $config->get('base_url')) ?: 'https://redeyed.com', '/');
 
@@ -76,6 +125,9 @@ function redeyed_sentinel_form_alter(array &$form, FormStateInterface $form_stat
     ],
   ];
 
+  // Remember which form this is so the validator can log it accurately.
+  $form['#redeyed_sentinel_form'] = $form_key;
+
   // Server-side verification runs before the form's own validation handlers.
   array_unshift($form['#validate'], 'redeyed_sentinel_validate');
 }
@@ -98,40 +150,56 @@ function redeyed_sentinel_validate(array &$form, FormStateInterface $form_state)
   // it is not part of Drupal's Form API tree, so read it from the request.
   $request = \Drupal::request();
   $token = trim((string) $request->request->get('sentinel-token', ''));
+  $remote_ip = (string) $request->getClientIp();
+  $form_key = isset($form['#redeyed_sentinel_form']) ? (string) $form['#redeyed_sentinel_form'] : 'form';
 
   $failure = t('Human verification failed — please try again.');
 
   if ($token === '') {
+    redeyed_sentinel_log_block($config, $form_key, $remote_ip, 'missing_token', NULL);
     $form_state->setErrorByName('redeyed_sentinel_captcha', $failure);
     return;
   }
 
-  $remote_ip = (string) $request->getClientIp();
+  $result = redeyed_sentinel_verify_result($base_url, $secret_key, $token, $remote_ip);
 
-  if (!redeyed_sentinel_verify($base_url, $secret_key, $token, $remote_ip)) {
+  if (!$result['success']) {
+    redeyed_sentinel_log_block($config, $form_key, $remote_ip, $result['outcome'], $result['score']);
     $form_state->setErrorByName('redeyed_sentinel_captcha', $failure);
   }
 }
 
 /**
- * Verifies a Sentinel token against the Redeyed siteverify endpoint.
+ * Record a blocked attempt to Drupal's log (when logging is enabled).
+ *
+ * Uses Drupal's native logging so admins see blocks at
+ * Reports → Recent log messages, filtered by type "redeyed_sentinel" — no
+ * custom table to maintain. The Secret Key is never logged.
+ */
+function redeyed_sentinel_log_block($config, string $form_key, string $ip, string $outcome, $score): void {
+  if (!(bool) ($config->get('enable_logging') ?? TRUE)) {
+    return;
+  }
+
+  \Drupal::logger('redeyed_sentinel')->warning('Blocked @form submission from @ip (outcome: @outcome, score: @score).', [
+    '@form' => $form_key,
+    '@ip' => $ip !== '' ? $ip : 'unknown',
+    '@outcome' => $outcome !== '' ? $outcome : 'n/a',
+    '@score' => $score === NULL ? 'n/a' : (string) $score,
+  ]);
+}
+
+/**
+ * Verify a Sentinel token and return the full result (success/outcome/score).
  *
  * Uses the reCAPTCHA/Turnstile-style flow: the site's own secret key
  * authenticates the request (there is no developer API key).
  *
- * @param string $base_url
- *   Sentinel base URL, no trailing slash.
- * @param string $secret_key
- *   The site's secret key (sent only in the POST body, never logged/echoed).
- * @param string $token
- *   The submitted sentinel-token value.
- * @param string $remote_ip
- *   The client IP address (optional; sent as "remoteip" when non-empty).
- *
- * @return bool
- *   TRUE only when the response reports success; FALSE on failure or error.
+ * @return array{success: bool, outcome: string, score: float|null}
  */
-function redeyed_sentinel_verify(string $base_url, string $secret_key, string $token, string $remote_ip = ''): bool {
+function redeyed_sentinel_verify_result(string $base_url, string $secret_key, string $token, string $remote_ip = ''): array {
+  $fail = ['success' => FALSE, 'outcome' => 'error', 'score' => NULL];
+
   $payload = [
     'secret' => $secret_key,
     'response' => $token,
@@ -158,13 +226,23 @@ function redeyed_sentinel_verify(string $base_url, string $secret_key, string $t
     \Drupal::logger('redeyed_sentinel')->warning('Sentinel verification request failed: @msg', [
       '@msg' => $e->getMessage(),
     ]);
-    return FALSE;
+    return $fail;
   }
 
   if (!is_array($data)) {
-    return FALSE;
+    return $fail;
   }
 
-  // Pass only when the response reports success === true.
-  return isset($data['success']) && $data['success'] === TRUE;
+  return [
+    'success' => isset($data['success']) && $data['success'] === TRUE,
+    'outcome' => isset($data['outcome']) ? (string) $data['outcome'] : '',
+    'score' => isset($data['score']) ? (float) $data['score'] : NULL,
+  ];
+}
+
+/**
+ * Verify a Sentinel token (boolean). Retained for backward compatibility.
+ */
+function redeyed_sentinel_verify(string $base_url, string $secret_key, string $token, string $remote_ip = ''): bool {
+  return redeyed_sentinel_verify_result($base_url, $secret_key, $token, $remote_ip)['success'];
 }

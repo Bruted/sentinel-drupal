@@ -69,7 +69,7 @@ attribute on the `sentinel-captcha` div.
 
 | Step   | Detail |
 |--------|--------|
-| Render | `hook_form_alter()` adds `{base_url}/sentinel.js` and a `sentinel-captcha` div (using your site key) to the login and registration forms. |
+| Render | `hook_form_alter()` adds `{base_url}/sentinel.js` and a `sentinel-captcha` div (using your site key) to each enabled form — login, registration, password reset and contact. |
 | Submit | The Sentinel widget injects a hidden `sentinel-token` field. |
 | Verify | A validation handler POSTs to `{base_url}/sentinel/siteverify` via `\Drupal::httpClient()` with body `{"secret": "...", "response": "...", "remoteip": "..."}` (the `remoteip` is the client IP and is optional). |
 | Pass   | Only when the JSON response has top-level `success === true` (the response also carries `outcome` and `score`); otherwise the form shows *"Human verification failed — please try again."* |
@@ -84,6 +84,16 @@ secret key authenticates the verify call, so no developer API key is required.
 - PHP 8.1+ (per Drupal core requirements)
 
 ## Changelog
+
+### 1.0.4
+
+- **Per-form protection.** Sentinel now guards the **password reset** (lost
+  password) and **contact** forms in addition to login and registration, each
+  with its own on/off checkbox under *Protected forms*. Login and registration
+  stay enabled by default, so upgrades are non-breaking.
+- **Block log.** Blocked attempts are recorded to Drupal's log (form, IP,
+  outcome, score) — view them at *Reports → Recent log messages*, type
+  `redeyed_sentinel`. Toggle with the **Log blocked attempts** checkbox.
 
 ### 1.0.3
 

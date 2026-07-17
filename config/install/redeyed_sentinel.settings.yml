@@ -1,6 +1,11 @@
 site_key: ''
 secret_key: ''
 base_url: 'https://redeyed.com'
+enable_login: true
+enable_register: true
+enable_lostpassword: false
+enable_contact: false
+enable_logging: true
 widget: ''
 theme: ''
 scheme: ''

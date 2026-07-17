@@ -11,6 +11,21 @@ redeyed_sentinel.settings:
     base_url:
       type: string
       label: 'Base URL'
+    enable_login:
+      type: boolean
+      label: 'Protect the login form'
+    enable_register:
+      type: boolean
+      label: 'Protect the registration form'
+    enable_lostpassword:
+      type: boolean
+      label: 'Protect the password-reset form'
+    enable_contact:
+      type: boolean
+      label: 'Protect the contact forms'
+    enable_logging:
+      type: boolean
+      label: 'Log blocked attempts'
     widget:
       type: string
       label: 'Widget type'
