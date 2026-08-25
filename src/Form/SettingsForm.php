@@ -65,6 +65,44 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
+    $form['forms'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Protected forms'),
+      '#description' => $this->t('Choose which forms show and verify the Sentinel widget. Login and registration are on by default.'),
+      '#open' => TRUE,
+    ];
+
+    $form['forms']['enable_login'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Login form'),
+      '#default_value' => (bool) ($config->get('enable_login') ?? TRUE),
+    ];
+
+    $form['forms']['enable_register'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Registration form'),
+      '#default_value' => (bool) ($config->get('enable_register') ?? TRUE),
+    ];
+
+    $form['forms']['enable_lostpassword'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Password reset (lost password) form'),
+      '#default_value' => (bool) ($config->get('enable_lostpassword') ?? FALSE),
+    ];
+
+    $form['forms']['enable_contact'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Contact forms (site-wide &amp; personal)'),
+      '#default_value' => (bool) ($config->get('enable_contact') ?? FALSE),
+    ];
+
+    $form['forms']['enable_logging'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Log blocked attempts'),
+      '#description' => $this->t('Record each blocked submission (form, IP, outcome) to the log. View them at <em>Reports → Recent log messages</em>, type <code>redeyed_sentinel</code>.'),
+      '#default_value' => (bool) ($config->get('enable_logging') ?? TRUE),
+    ];
+
     $form['appearance'] = [
       '#type' => 'details',
       '#title' => $this->t('Widget customization (optional)'),
@@ -73,80 +111,42 @@ class SettingsForm extends ConfigFormBase {
     ];
 
     $form['appearance']['widget'] = [
-      '#type' => 'select',
+      '#type' => 'textfield',
       '#title' => $this->t('Widget type'),
-      '#description' => $this->t('Which challenge widget to render. Leave on <em>Server default</em> to let Sentinel choose.'),
-      '#options' => [
-        '' => $this->t('Server default'),
-        'behavioral' => $this->t('Behavioral'),
-        'pow' => $this->t('Proof of work'),
-        'text_math' => $this->t('Text / math'),
-        'image_puzzle' => $this->t('Image puzzle'),
-        'rotate_align' => $this->t('Rotate & align'),
-        'press_hold' => $this->t('Press & hold'),
-      ],
+      '#description' => $this->t('Widget style. Use <code>adaptive</code> (recommended) to let Sentinel escalate by risk, <code>all</code> to randomise per visitor, or name a type: <code>behavioral</code>, <code>pow</code>, <code>press_hold</code>, <code>text_math</code>, <code>image_puzzle</code>, <code>rotate_align</code>, <code>image_pick</code>, <code>relational_scene</code>, <code>motion_track</code>, <code>light_shadow</code>, <code>shape_match</code>. Leave empty for the default.'),
       '#default_value' => (string) $config->get('widget'),
+      '#maxlength' => 255,
     ];
 
     $form['appearance']['theme'] = [
-      '#type' => 'select',
+      '#type' => 'textfield',
       '#title' => $this->t('Theme'),
-      '#description' => $this->t('Widget colour theme.'),
-      '#options' => [
-        'auto' => $this->t('Auto (match visitor)'),
-        'light' => $this->t('Light'),
-        'dark' => $this->t('Dark'),
-      ],
-      '#default_value' => (string) ($config->get('theme') ?: 'auto'),
+      '#description' => $this->t('Widget theme: <code>auto</code>, <code>light</code> or <code>dark</code>. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('theme'),
+      '#maxlength' => 255,
     ];
 
     $form['appearance']['scheme'] = [
-      '#type' => 'select',
+      '#type' => 'textfield',
       '#title' => $this->t('Colour scheme'),
-      '#description' => $this->t('Named colour scheme for the widget.'),
-      '#options' => [
-        'default' => $this->t('Default'),
-        'ocean' => $this->t('Ocean'),
-        'forest' => $this->t('Forest'),
-        'sunset' => $this->t('Sunset'),
-        'graphite' => $this->t('Graphite'),
-        'royalty' => $this->t('Royalty'),
-        'ruby' => $this->t('Ruby'),
-        'hacker' => $this->t('Hacker'),
-        'monochrome' => $this->t('Monochrome'),
-        'midnight' => $this->t('Midnight'),
-        'aurora' => $this->t('Aurora'),
-      ],
-      '#default_value' => (string) ($config->get('scheme') ?: 'default'),
+      '#description' => $this->t('Named colour scheme for the widget. Leave empty for the default.'),
+      '#default_value' => (string) $config->get('scheme'),
+      '#maxlength' => 255,
     ];
 
     $form['appearance']['difficulty'] = [
-      '#type' => 'select',
+      '#type' => 'textfield',
       '#title' => $this->t('Difficulty'),
-      '#description' => $this->t('Minimum challenge strength. <em>Adaptive</em> lets Sentinel scale difficulty to risk; a fixed level only <strong>raises</strong> the baseline, never lowers it.'),
-      '#options' => [
-        '' => $this->t('Adaptive'),
-        'easy' => $this->t('Easy'),
-        'medium' => $this->t('Medium'),
-        'hard' => $this->t('Hard'),
-        'max' => $this->t('Max'),
-      ],
+      '#description' => $this->t('Optional minimum challenge strength: <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>max</code> (or <code>1</code>–<code>6</code>). This only <strong>raises</strong> challenge strength above the adaptive baseline; it never lowers it. Leave empty for the default.'),
       '#default_value' => (string) $config->get('difficulty'),
+      '#maxlength' => 255,
     ];
 
     $form['appearance']['width'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Width'),
-      '#description' => $this->t('Widget width, e.g. <code>full</code>, <code>100%</code> or <code>340px</code>. Leave empty for the default.'),
+      '#description' => $this->t('Optional width for the widget container, e.g. <code>full</code>, <code>100%</code> or <code>340px</code>. Leave empty for the default.'),
       '#default_value' => (string) $config->get('width'),
-      '#maxlength' => 64,
-    ];
-
-    $form['appearance']['form'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Form key'),
-      '#description' => $this->t('Optional form identifier passed to Sentinel for per-form analytics. Leave empty unless instructed.'),
-      '#default_value' => (string) $config->get('form'),
       '#maxlength' => 255,
     ];
 
@@ -166,12 +166,16 @@ class SettingsForm extends ConfigFormBase {
       ->set('site_key', trim((string) $form_state->getValue('site_key')))
       ->set('secret_key', trim((string) $form_state->getValue('secret_key')))
       ->set('base_url', $base_url)
+      ->set('enable_login', (bool) $form_state->getValue('enable_login'))
+      ->set('enable_register', (bool) $form_state->getValue('enable_register'))
+      ->set('enable_lostpassword', (bool) $form_state->getValue('enable_lostpassword'))
+      ->set('enable_contact', (bool) $form_state->getValue('enable_contact'))
+      ->set('enable_logging', (bool) $form_state->getValue('enable_logging'))
       ->set('widget', trim((string) $form_state->getValue('widget')))
       ->set('theme', trim((string) $form_state->getValue('theme')))
       ->set('scheme', trim((string) $form_state->getValue('scheme')))
       ->set('difficulty', trim((string) $form_state->getValue('difficulty')))
       ->set('width', trim((string) $form_state->getValue('width')))
-      ->set('form', trim((string) $form_state->getValue('form')))
       ->save();
 
     parent::submitForm($form, $form_state);

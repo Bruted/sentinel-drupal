@@ -49,20 +49,17 @@ Go to **Administration → Configuration → People → Redeyed Sentinel CAPTCHA
 ### Widget customization (optional)
 
 Under **Widget customization (optional)** you can fine-tune how the widget looks
-and behaves. Every field is optional and backward-compatible — leave any at its
-default to use the Sentinel widget defaults. Each renders as a `data-*` attribute
-on the `sentinel-captcha` div, but **only when it is non-default**: `Auto` theme,
-`Default` scheme, `Server default` widget, `Adaptive` difficulty and empty
-width/form are omitted from the markup entirely.
+and behaves. Every field is optional and backward-compatible — leave any of them
+empty to use the Sentinel widget defaults. When set, each renders as a `data-*`
+attribute on the `sentinel-captcha` div.
 
 | Field        | Attribute         | Purpose |
 |--------------|-------------------|---------|
-| Widget type  | `data-widget`     | Which challenge to render: `behavioral`, `pow`, `text_math`, `image_puzzle`, `rotate_align`, `press_hold` (or *Server default*). |
-| Theme        | `data-theme`      | `auto` (default), `light` or `dark`. |
-| Colour scheme| `data-scheme`     | `default`, `ocean`, `forest`, `sunset`, `graphite`, `royalty`, `ruby`, `hacker`, `monochrome`, `midnight`, `aurora`. |
-| Difficulty   | `data-difficulty` | Minimum challenge strength: *Adaptive* (default), `easy`, `medium`, `hard`, `max`. |
-| Width        | `data-width`      | Widget width, e.g. `full`, `100%` or `340px`. |
-| Form key     | `data-form`       | Optional form identifier passed to Sentinel for per-form analytics. |
+| Widget type  | `data-widget`     | `adaptive` (recommended), `all` (random), or a type: `behavioral`, `pow`, `press_hold`, `text_math`, `image_puzzle`, `rotate_align`, `image_pick`, `relational_scene`, `motion_track`, `light_shadow`, `shape_match`. |
+| Theme        | `data-theme`      | `auto`, `light` or `dark`. |
+| Colour scheme| `data-scheme`     | Named colour scheme for the widget. |
+| Difficulty   | `data-difficulty` | Minimum challenge strength: `easy`, `medium`, `hard`, `max` (or `1`–`6`). |
+| Width        | `data-width`      | Widget container width, e.g. `full`, `100%` or `340px`. |
 
 > **Difficulty only raises challenge strength above the adaptive baseline.** It
 > never lowers it — Sentinel still escalates on its own when it sees risk, so a
@@ -72,7 +69,7 @@ width/form are omitted from the markup entirely.
 
 | Step   | Detail |
 |--------|--------|
-| Render | `hook_form_alter()` adds `{base_url}/sentinel.js` and a `sentinel-captcha` div (using your site key) to the login and registration forms. |
+| Render | `hook_form_alter()` adds `{base_url}/sentinel.js` and a `sentinel-captcha` div (using your site key) to each enabled form — login, registration, password reset and contact. |
 | Submit | The Sentinel widget injects a hidden `sentinel-token` field. |
 | Verify | A validation handler POSTs to `{base_url}/sentinel/siteverify` via `\Drupal::httpClient()` with body `{"secret": "...", "response": "...", "remoteip": "..."}` (the `remoteip` is the client IP and is optional). |
 | Pass   | Only when the JSON response has top-level `success === true` (the response also carries `outcome` and `score`); otherwise the form shows *"Human verification failed — please try again."* |
@@ -85,6 +82,29 @@ secret key authenticates the verify call, so no developer API key is required.
 
 - Drupal 10 or 11
 - PHP 8.1+ (per Drupal core requirements)
+
+## Changelog
+
+### 1.0.5
+
+- **Widget type field now documents every challenge**, including the new **Object match** 3D challenge (`shape_match`) and the `relational_scene`, `motion_track` and `light_shadow` reasoning challenges.
+- Removed `checkbox` from the widget types — it was never a real Sentinel challenge and silently fell back to the site default. Use `behavioral` for the one-click checkbox, or `adaptive` to let Sentinel choose by risk.
+
+### 1.0.4
+
+- **Per-form protection.** Sentinel now guards the **password reset** (lost
+  password) and **contact** forms in addition to login and registration, each
+  with its own on/off checkbox under *Protected forms*. Login and registration
+  stay enabled by default, so upgrades are non-breaking.
+- **Block log.** Blocked attempts are recorded to Drupal's log (form, IP,
+  outcome, score) — view them at *Reports → Recent log messages*, type
+  `redeyed_sentinel`. Toggle with the **Log blocked attempts** checkbox.
+
+### 1.0.3
+
+- Added an optional **Width** setting that renders as `data-width` on the
+  `sentinel-captcha` div only when set, e.g. `full`, `100%` or `340px`.
+  Backward-compatible; leave it empty for the default.
 
 ## License
 
