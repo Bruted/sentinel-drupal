@@ -32,6 +32,62 @@ class SettingsForm extends ConfigFormBase {
   }
 
   /**
+   * Fetch the challenge types / themes / schemes this Sentinel deployment
+   * accepts, from GET {base_url}/captcha/capabilities.
+   *
+   * Hardcoding these lists is what let a stale value like "checkbox" sit in
+   * this module for months doing nothing: an unrecognised data-widget is not an
+   * error, it silently falls back to the site default. Reading the list from
+   * the server means new challenge types appear here without a module release.
+   *
+   * Cached for 12 hours. Fails soft: on any error the caller falls back to a
+   * built-in list, so the settings form still works offline. No keys are sent —
+   * the endpoint is public.
+   *
+   * @return array|null
+   *   Decoded capabilities, or NULL when unavailable.
+   */
+  protected function fetchCapabilities(string $base_url): ?array {
+    $cid = 'redeyed_sentinel:capabilities:' . md5($base_url);
+    $cache = \Drupal::cache()->get($cid);
+    if ($cache && is_array($cache->data)) {
+      return $cache->data ?: NULL;
+    }
+
+    try {
+      $response = \Drupal::httpClient()->get(rtrim($base_url, '/') . '/captcha/capabilities', [
+        'timeout' => 5,
+        'headers' => ['Accept' => 'application/json'],
+      ]);
+      $body = json_decode((string) $response->getBody(), TRUE);
+    }
+    catch (\Throwable $e) {
+      $body = NULL;
+    }
+
+    if (!is_array($body) || empty($body['types']['concrete'])) {
+      // Cache the failure briefly so a broken endpoint cannot make every
+      // settings page load wait on a 5-second timeout.
+      \Drupal::cache()->set($cid, [], time() + 300);
+      return NULL;
+    }
+
+    \Drupal::cache()->set($cid, $body, time() + 43200);
+    return $body;
+  }
+
+  /**
+   * Keep a stored value selectable even when the server no longer lists it, so
+   * opening this form can never silently change a site's configuration.
+   */
+  protected function preserveStored(array $options, string $current): array {
+    if ($current !== '' && !isset($options[$current])) {
+      $options[$current] = $this->t('@value (not currently offered)', ['@value' => $current]);
+    }
+    return $options;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
@@ -110,28 +166,73 @@ class SettingsForm extends ConfigFormBase {
       '#open' => FALSE,
     ];
 
-    $form['appearance']['widget'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Widget type'),
-      '#description' => $this->t('Widget style. Use <code>adaptive</code> (recommended) to let Sentinel escalate by risk, <code>all</code> to randomise per visitor, or name a type: <code>behavioral</code>, <code>pow</code>, <code>press_hold</code>, <code>text_math</code>, <code>image_puzzle</code>, <code>rotate_align</code>, <code>image_pick</code>, <code>relational_scene</code>, <code>motion_track</code>, <code>light_shadow</code>, <code>shape_match</code>. Leave empty for the default.'),
-      '#default_value' => (string) $config->get('widget'),
-      '#maxlength' => 255,
+    // Options come from the server so new challenge types and colour schemes
+    // appear here without a module release. NULL means the fetch failed.
+    $caps = $this->fetchCapabilities((string) $config->get('base_url') ?: 'https://redeyed.com');
+    $offline_note = $caps === NULL
+      ? ' ' . $this->t('<em>Showing a built-in list — the Sentinel server could not be reached.</em>')
+      : '';
+
+    $widget_options = [
+      'adaptive' => $this->t('Adaptive — escalate by risk (recommended)'),
+      'all' => $this->t('Random — a different type per visitor'),
     ];
+    foreach ($caps['types']['concrete'] ?? ['behavioral', 'pow', 'press_hold', 'text_math', 'image_pick'] as $type) {
+      $widget_options[$type] = $type;
+    }
+
+    $form['appearance']['widget'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Widget type'),
+      '#description' => $this->t('Which challenge the widget renders. <strong>Adaptive</strong> is recommended — it starts with a low-friction proof and escalates only when the risk score calls for it.') . $offline_note,
+      '#options' => $this->preserveStored($widget_options, (string) $config->get('widget')),
+      '#empty_option' => $this->t('Use the Sentinel default'),
+      '#default_value' => (string) $config->get('widget'),
+    ];
+
+    $theme_options = [];
+    foreach ($caps['themes'] ?? ['auto', 'light', 'dark'] as $theme) {
+      $theme_options[$theme] = $theme === 'auto'
+        ? $this->t('auto — follow the system setting')
+        : $theme;
+    }
 
     $form['appearance']['theme'] = [
-      '#type' => 'textfield',
+      '#type' => 'select',
       '#title' => $this->t('Theme'),
-      '#description' => $this->t('Widget theme: <code>auto</code>, <code>light</code> or <code>dark</code>. Leave empty for the default.'),
+      '#description' => $this->t('Colour theme for the widget.') . $offline_note,
+      '#options' => $this->preserveStored($theme_options, (string) $config->get('theme')),
+      '#empty_option' => $this->t('Use the Sentinel default'),
       '#default_value' => (string) $config->get('theme'),
-      '#maxlength' => 255,
     ];
 
+    $scheme_options = [];
+    if (!empty($caps['schemes'])) {
+      foreach ($caps['schemes'] as $scheme) {
+        if (empty($scheme['name'])) {
+          continue;
+        }
+        $name = (string) $scheme['name'];
+        // A premium scheme on a free plan silently renders as `default`, so say
+        // so rather than offering a choice that quietly does nothing.
+        $scheme_options[$name] = empty($scheme['premium'])
+          ? $name
+          : $this->t('@name (paid plans only)', ['@name' => $name]);
+      }
+    }
+    else {
+      foreach (['default', 'ocean', 'forest', 'sunset', 'graphite'] as $name) {
+        $scheme_options[$name] = $name;
+      }
+    }
+
     $form['appearance']['scheme'] = [
-      '#type' => 'textfield',
+      '#type' => 'select',
       '#title' => $this->t('Colour scheme'),
-      '#description' => $this->t('Named colour scheme for the widget. Leave empty for the default.'),
+      '#description' => $this->t('Colour scheme for the widget.') . $offline_note,
+      '#options' => $this->preserveStored($scheme_options, (string) $config->get('scheme')),
+      '#empty_option' => $this->t('Use the Sentinel default'),
       '#default_value' => (string) $config->get('scheme'),
-      '#maxlength' => 255,
     ];
 
     $form['appearance']['difficulty'] = [

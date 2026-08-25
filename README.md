@@ -85,6 +85,16 @@ secret key authenticates the verify call, so no developer API key is required.
 
 ## Changelog
 
+### 1.0.6
+
+- **Widget type, Theme and Colour scheme are now dropdowns**, populated live from
+  your Sentinel server via `GET /captcha/capabilities`. New challenge types and
+  colour schemes appear automatically, with no module release.
+- Premium colour schemes are labelled as paid-plan only. Previously you could
+  type one on a free plan and it would silently render the default instead.
+- Falls back to a built-in list (and says so) if the server cannot be reached,
+  and a value you already saved stays selectable even if it is no longer offered.
+
 ### 1.0.5
 
 - **Widget type field now documents every challenge**, including the new **Object match** 3D challenge (`shape_match`) and the `relational_scene`, `motion_track` and `light_shadow` reasoning challenges.
