@@ -177,8 +177,14 @@ class SettingsForm extends ConfigFormBase {
       'adaptive' => $this->t('Adaptive — escalate by risk (recommended)'),
       'all' => $this->t('Random — a different type per visitor'),
     ];
+    // The capabilities response carries human labels alongside the keys, and
+    // they must be used: titling the key produces "Shape Match", but the
+    // challenge matches on colour too and is called "Object match" everywhere a
+    // customer can read it. Falling back to a titled key only ever applies to
+    // the offline list below.
+    $labels = (array) ($caps['types']['labels'] ?? []);
     foreach ($caps['types']['concrete'] ?? ['behavioral', 'pow', 'press_hold', 'text_math', 'image_pick'] as $type) {
-      $widget_options[$type] = $type;
+      $widget_options[$type] = $labels[$type] ?? ucwords(str_replace('_', ' ', (string) $type));
     }
 
     $form['appearance']['widget'] = [

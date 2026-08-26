@@ -55,7 +55,7 @@ attribute on the `sentinel-captcha` div.
 
 | Field        | Attribute         | Purpose |
 |--------------|-------------------|---------|
-| Widget type  | `data-widget`     | `adaptive` (recommended), `all` (random), or a type: `behavioral`, `pow`, `press_hold`, `text_math`, `image_puzzle`, `rotate_align`, `image_pick`, `relational_scene`, `motion_track`, `light_shadow`, `shape_match`. |
+| Widget type  | `data-widget`     | `adaptive` (recommended), `all` (random), or a type: `behavioral`, `pow`, `press_hold`, `text_math`, `image_puzzle`, `rotate_align`, `image_pick`, `relational_scene`, `motion_track`, `light_shadow`, `shape_match`, `count_match`. |
 | Theme        | `data-theme`      | `auto`, `light` or `dark`. |
 | Colour scheme| `data-scheme`     | Named colour scheme for the widget. |
 | Difficulty   | `data-difficulty` | Minimum challenge strength: `easy`, `medium`, `hard`, `max` (or `1`–`6`). |
