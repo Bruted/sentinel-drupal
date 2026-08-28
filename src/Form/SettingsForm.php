@@ -249,6 +249,15 @@ class SettingsForm extends ConfigFormBase {
       '#maxlength' => 255,
     ];
 
+    $form['appearance']['widget_steps'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Verification steps'),
+      '#description' => $this->t('Optional number of verification steps (<code>1</code>–<code>7</code>). <strong>Paid plans only.</strong> Like difficulty this only <strong>raises</strong> the step count above the adaptive baseline; it never lowers it. Leave empty to let Sentinel decide.'),
+      '#options' => array_combine(range(1, 7), range(1, 7)),
+      '#empty_option' => $this->t('Use the Sentinel default'),
+      '#default_value' => (string) $config->get('widget_steps'),
+    ];
+
     $form['appearance']['width'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Width'),
@@ -282,6 +291,7 @@ class SettingsForm extends ConfigFormBase {
       ->set('theme', trim((string) $form_state->getValue('theme')))
       ->set('scheme', trim((string) $form_state->getValue('scheme')))
       ->set('difficulty', trim((string) $form_state->getValue('difficulty')))
+      ->set('widget_steps', trim((string) $form_state->getValue('widget_steps')))
       ->set('width', trim((string) $form_state->getValue('width')))
       ->save();
 

@@ -38,6 +38,9 @@ redeyed_sentinel.settings:
     difficulty:
       type: string
       label: 'Difficulty'
+    widget_steps:
+      type: string
+      label: 'Verification steps'
     width:
       type: string
       label: 'Width'
